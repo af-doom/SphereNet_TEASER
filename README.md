@@ -1,7 +1,7 @@
 
-# SphereNet: Learning a Noise-Robust and General Descriptor for Point Cloud Registration
+# Global point cloud registration based on SphereNet and TEASER++
 
-🔥🔥🔥 Our paper is accepted by IEEE Transactions on Geoscience and Remote Sensing (TGRS) 🔥🔥🔥
+ 
 [SphereNet: Learning a Noise-Robust and General Descriptor for Point Cloud Registration](https://ieeexplore.ieee.org/document/10356130).
 
 ### (1) Overview
@@ -10,7 +10,7 @@
 
 [//]: # (<p align="center"> <img src="figs/FMR.png" width="50%"> </p>)
 
-
+[TEASER++: ast & certifiable 3D registration](https://github.com/MIT-SPARK/TEASER-plusplus).
 
 ### (2) Setup
 This code has been tested with 
