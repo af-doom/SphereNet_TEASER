@@ -52,7 +52,8 @@ If necessary, you will need to change the radius parameter to fit your data.
 cd ./ThreeDMatch/Test
 python demo.py  
 ```
-![image](https://github.com/user-attachments/assets/e64ed21f-64f4-4747-85a8-8a8520abb492)
+![image](https://github.com/user-attachments/assets/235d34ef-e4d0-4a57-a8a1-042f5fa55661)
+
 
 ## Acknowledgement
 
