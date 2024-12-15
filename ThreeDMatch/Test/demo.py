@@ -7,7 +7,7 @@ import torch
 import shutil
 import torch.nn as nn
 import sys
-
+import teaserpp_python
 sys.path.append('../../')
 import script.common as cm
 from ThreeDMatch.Test.tools import get_pcd, get_keypts
@@ -15,8 +15,8 @@ from sklearn.neighbors import KDTree
 import importlib
 import open3d
 import copy
-
-
+from scipy.spatial import cKDTree
+from scipy.spatial.transform import Rotation as R
 def make_open3d_point_cloud(xyz, color=None):
     pcd = open3d.geometry.PointCloud()
     pcd.points = open3d.utility.Vector3dVector(xyz)
@@ -24,10 +24,10 @@ def make_open3d_point_cloud(xyz, color=None):
         pcd.paint_uniform_color(color)
     return pcd
 
-'''
-vicinity=0.3
-'''
-def build_patch_input(pcd, keypts, vicinity=0.3, num_points_per_patch=2048):
+
+vicinity=3
+
+def build_patch_input(pcd, keypts, vicinity=0.8, num_points_per_patch=2048):
     refer_pts = keypts.astype(np.float32)
     pts = np.array(pcd.points).astype(np.float32)
     num_patches = refer_pts.shape[0]
@@ -75,8 +75,8 @@ def noise_Gaussian_proportion(points, std, proportion):
     out[select<proportion]=points[select<proportion]+noise[select<proportion]
     return out
 
-def unsampling_points(points):
-    n = np.random.choice(len(points), 5000, replace=False)
+def unsampling_points(points,num_key=2000):
+    n = np.random.choice(len(points),num_key , replace=False)
     keypoints= points[n]
     return keypoints
 
@@ -89,18 +89,24 @@ def noise_Gaussian_replace(points, std, proportion):
     out[select<proportion]=points[select<proportion]+noise[select<proportion]
     return out
 
-def prepare_patch(pcdpath):
+def prepare_patch(pcdpath,numkey=2000):
+
     pcd = open3d.io.read_point_cloud(pcdpath)
-    pcd_np = np.array(pcd.points).astype(np.float32)
-    keypoints = unsampling_points(pcd_np)
-    local_patches = build_patch_input(pcd, keypoints)  # [num_keypts, 1024, 4]
+
+    voxel_size = 0.05  # 根据需求设置体素大小
+    pcd_down = pcd.voxel_down_sample(voxel_size)
+    pcd_np = np.array(pcd_down.points).astype(np.float32)
+
+    # pcd_np = np.array(pcd.points).astype(np.float32)
+    keypoints = unsampling_points(pcd_np,numkey)
+    local_patches = build_patch_input(pcd_down, keypoints)  # [num_keypts, 1024, 4]
     return local_patches, keypoints
 
 
-def generate_descriptor(model, pcdpath):
+def generate_descriptor(model, pcdpath,numkey=2000):
     model.eval()
     with torch.no_grad():
-        local_patches, keypoints = prepare_patch(pcdpath)
+        local_patches, keypoints = prepare_patch(pcdpath,numkey)
         input_ = torch.tensor(local_patches.astype(np.float32))
         B = input_.shape[0]
         input_ = input_.cuda()
@@ -109,7 +115,7 @@ def generate_descriptor(model, pcdpath):
         desc_list = []
         start_time = time.time()
         desc_len = 64
-        step_size = 4
+        step_size =8
         iter_num = np.int32(np.ceil(B / step_size))
         for k in range(iter_num):
             if k == iter_num - 1:
@@ -140,6 +146,31 @@ def calculate_M(source_desc, target_desc):
             result.append([i, sourceNNidx[i][0]])
     return np.array(result)
 
+def find_correspondences( feats0, feats1, mutual_filter=True):
+        nns01 = find_knn_cpu(feats0, feats1, knn=1, return_distance=False)
+        corres01_idx0 = np.arange(len(nns01))
+        corres01_idx1 = nns01
+
+        if not mutual_filter:
+            return corres01_idx0, corres01_idx1
+
+        nns10 = find_knn_cpu(feats1, feats0, knn=1, return_distance=False)
+        corres10_idx1 = np.arange(len(nns10))
+        corres10_idx0 = nns10
+
+        mutual_filter = (corres10_idx0[corres01_idx1] == corres01_idx0)
+        corres_idx0 = corres01_idx0[mutual_filter]
+        corres_idx1 = corres01_idx1[mutual_filter]
+
+        return corres_idx0, corres_idx1
+
+def find_knn_cpu(feat0, feat1, knn=1, return_distance=False):
+        feat1tree = cKDTree(feat1)
+        dists, nn_inds = feat1tree.query(feat0, k=knn)
+        if return_distance:
+            return nn_inds, dists
+        else:
+            return nn_inds
 def register2Fragments(keypoints1, keypoints2, descriptor1, descriptor2, gtTrans = None):
 
     source_keypts = keypoints1
@@ -185,12 +216,12 @@ def register2Fragments(keypoints1, keypoints2, descriptor1, descriptor2, gtTrans
         s_desc,
         t_desc,
         mutual_filter=True,
-        max_correspondence_distance=0.05,
+        max_correspondence_distance=0.5,
         estimation_method=open3d.pipelines.registration.TransformationEstimationPointToPoint(False),
         ransac_n=4,
         checkers=[
             open3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
-            open3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(0.05),
+            open3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(0.2),
         ],
         criteria=open3d.pipelines.registration.RANSACConvergenceCriteria(50000, 1000),
     )
@@ -236,6 +267,22 @@ def draw_registration_corr(source, target,source_keypoint, target_keypoint, tran
     corr_line.paint_uniform_color([1, 0, 0])
     open3d.visualization.draw_geometries([source_temp, target_temp, inlier_corr_line, corr_line])
 
+def get_teaser_solver(noise_bound):
+        solver_params = teaserpp_python.RobustRegistrationSolver.Params()
+        solver_params.cbar2 = 1.0
+        solver_params.noise_bound = noise_bound
+        solver_params.estimate_scaling = False
+        solver_params.inlier_selection_mode = \
+            teaserpp_python.RobustRegistrationSolver.INLIER_SELECTION_MODE.PMC_EXACT
+        solver_params.rotation_tim_graph = \
+            teaserpp_python.RobustRegistrationSolver.INLIER_GRAPH_FORMULATION.CHAIN
+        solver_params.rotation_estimation_algorithm = \
+            teaserpp_python.RobustRegistrationSolver.ROTATION_ESTIMATION_ALGORITHM.GNC_TLS
+        solver_params.rotation_gnc_factor = 1.4
+        solver_params.rotation_max_iterations = 10000
+        solver_params.rotation_cost_threshold = 1e-16
+        solver = teaserpp_python.RobustRegistrationSolver(solver_params)
+        return solver
 if __name__ == '__main__':
 
     # dynamically load the model
@@ -245,23 +292,51 @@ if __name__ == '__main__':
     module_spec = importlib.util.spec_from_file_location(module_name, module_file_path)
     module = importlib.util.module_from_spec(module_spec)
     module_spec.loader.exec_module(module)
-    model = module.SphereNet(0.3, 15, 40, 20, '3DMatch')
+    model = module.SphereNet(1.5, 15, 40, 20, '3DMatch', True, True)
     model = nn.DataParallel(model, device_ids=[0])
-    model.load_state_dict(torch.load('../../pretrain/3DMatch_best.pkl'))
-    num_keypoints = int(sys.argv[1])
+    model.load_state_dict(torch.load('../../pretrain/3DMatch_generalization.pkl'))
+    num_keypoints =2000
 
-    # pcdpath1 = f"/home/zhaoguiyu/code/SpinNet/data/3DMatch/fragments/7-scenes-redkitchen/cloud_bin_0.ply"
-    # pcdpath2 = f"/home/zhaoguiyu/code/SpinNet/data/3DMatch/fragments/7-scenes-redkitchen/cloud_bin_7.ply"
-    pcdpath1 = sys.argv[2]
-    pcdpath2 = sys.argv[3]
+    pcdpath1 = f"/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/MicroG-main/data/6.pcd"
+    pcdpath2 = f"/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/MicroG-main/data/target20.pcd"
+
+
     pcd1 = open3d.io.read_point_cloud(pcdpath1)
     pcd2 = open3d.io.read_point_cloud(pcdpath2)
-    descriptor1, keypoints1 = generate_descriptor(model, pcdpath1)
-    descriptor2, keypoints2 = generate_descriptor(model, pcdpath2)
-    transformation, correspondence_set = register2Fragments(keypoints1, keypoints2, descriptor1, descriptor2)
+    # 查看点云数量
+    num_points_pcd1 = len(pcd1.points)
+    num_points_pcd2 = len(pcd2.points)
+    print(num_points_pcd2/num_points_pcd1)
+
+    print(f"点云1的点数量: {num_points_pcd1}")
+    print(f"点云2的点数量: {num_points_pcd2}")
+    descriptor1, keypoints1 = generate_descriptor(model, pcdpath1,1000)
+    descriptor2, keypoints2 = generate_descriptor(model, pcdpath2,5000)
+    print(type(keypoints1))  # <class 'int'>
+    print(type(keypoints1))  # <class 'str'>
+    corrs_A, corrs_B = find_correspondences(
+        descriptor1, descriptor2, mutual_filter=True)
+    corrs_A = corrs_A.T
+    corrs_B = corrs_B.T
+    keypoints1=keypoints1.T
+    keypoints2 = keypoints2.T
+    A_corr = keypoints1[:, corrs_A]
+    B_corr = keypoints2[:, corrs_B]
+    # # transformation, correspondence_set = register2Fragments(keypoints1, keypoints2, descriptor1, descriptor2)
+    # numpy_data = np.asarray(correspondence_set)
+    # print(numpy_data)
+    teaser_solver =get_teaser_solver(0.1)
+    teaser_solver.solve(A_corr, B_corr)
+    solution = teaser_solver.getSolution()
+    transformation = np.eye(4)
+    transformation[:3, :3] = solution.rotation
+    transformation[:3, 3] = solution.translation
+    print(transformation)
     source_pcd = open3d.geometry.PointCloud()
-    source_pcd.points = open3d.utility.Vector3dVector(keypoints1)
+    source_pcd.points = open3d.utility.Vector3dVector(keypoints1.T)
     target_pcd = open3d.geometry.PointCloud()
-    target_pcd.points = open3d.utility.Vector3dVector(keypoints2)
+    target_pcd.points = open3d.utility.Vector3dVector(keypoints2.T)
     # draw_registration_corr(pcd1, pcd2, source_pcd, target_pcd, transformation, correspondence_set)
+    draw_registration_result(source_pcd, target_pcd)
+
     draw_registration_result(pcd1, pcd2)

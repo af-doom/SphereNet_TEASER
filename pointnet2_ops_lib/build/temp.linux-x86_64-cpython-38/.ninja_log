@@ -1,0 +1,10 @@
+# ninja log v5
+0	29320	1734166500933421452	/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/SphereNet/pointnet2_ops_lib/build/temp.linux-x86_64-cpython-38/pointnet2_ops/_ext-src/src/sampling.o	cf5763386ce9781d
+0	31134	1734166502753425528	/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/SphereNet/pointnet2_ops_lib/build/temp.linux-x86_64-cpython-38/pointnet2_ops/_ext-src/src/ball_query.o	f7abab0a4e5280f3
+1	32526	1734166504145428641	/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/SphereNet/pointnet2_ops_lib/build/temp.linux-x86_64-cpython-38/pointnet2_ops/_ext-src/src/group_points.o	3220ddf92afed419
+0	33581	1734166505197430989	/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/SphereNet/pointnet2_ops_lib/build/temp.linux-x86_64-cpython-38/pointnet2_ops/_ext-src/src/bindings.o	abc019cae60ddb31
+1	33763	1734166505381431400	/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/SphereNet/pointnet2_ops_lib/build/temp.linux-x86_64-cpython-38/pointnet2_ops/_ext-src/src/interpolate.o	5da2e6bacbbf1ebd
+0	42121	1734166513745449977	/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/SphereNet/pointnet2_ops_lib/build/temp.linux-x86_64-cpython-38/pointnet2_ops/_ext-src/src/ball_query_gpu.o	e317dd07057aae79
+1	42642	1734166514269451135	/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/SphereNet/pointnet2_ops_lib/build/temp.linux-x86_64-cpython-38/pointnet2_ops/_ext-src/src/interpolate_gpu.o	6a6d7dc80d958f9d
+1	43040	1734166514665452011	/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/SphereNet/pointnet2_ops_lib/build/temp.linux-x86_64-cpython-38/pointnet2_ops/_ext-src/src/sampling_gpu.o	20839534b135b626
+1	43300	1734166514925452585	/home/wyw/ROS1_PROJECT/BD/2023/Multi_lidar/SphereNet/pointnet2_ops_lib/build/temp.linux-x86_64-cpython-38/pointnet2_ops/_ext-src/src/group_points_gpu.o	ed11a14eeeebe79a
