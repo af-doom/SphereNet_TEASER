@@ -29,10 +29,24 @@ conda install pytorch==1.11.0 torchvision==0.12.0 cudatoolkit=11.3 -c pytorch
 conda install -c open3d-admin open3d==0.11.1
 pip install "git+git://github.com/erikwijmans/Pointnet2_PyTorch.git#egg=pointnet2_ops&subdirectory=pointnet2_ops_lib"
 ```
+- pip Teaser++
+```
+sudo apt install cmake libeigen3-dev libboost-all-dev
+conda create -n teaser_test python=3.6 numpy
+conda activate teaser_test
+conda install -c open3d-admin open3d=0.9.0.0
+git clone https://github.com/MIT-SPARK/TEASER-plusplus.git
+cd TEASER-plusplus && mkdir build && cd build
+cmake -DTEASERPP_PYTHON_VERSION=3.6 .. && make teaserpp_python
+cd python && pip install .
+cd ../.. && cd examples/teaser_python_ply 
+python teaser_python_ply.py
+```
+
 - Prepare the datasets
 
 
-### (1) Demo: Global point cloud registration using SphereNet and TEASER++
+### Demo: Global point cloud registration using SphereNet and TEASER++
 If necessary, you will need to change the radius parameter to fit your data.
 ```
 cd ./ThreeDMatch/Test
@@ -42,14 +56,8 @@ python demo.py
 ## Acknowledgement
 
 In this project, we use parts of the implementations of the following works:
-
-* [Pointnet2_PyTorch](https://github.com/erikwijmans/Pointnet2_PyTorch)
-* [PPF-FoldNet](https://github.com/XuyangBai/PPF-FoldNet)
-* [D3Feat.pytorch](https://github.com/XuyangBai/D3Feat.pytorch)
-* [SpinNet](https://github.com/QingyongHu/SpinNet)
-* [Geotransformer](https://github.com/qinzheng93/GeoTransformer)
-* [Predator](https://github.com/prs-eth/OverlapPredator)
-
+* [SphereNet](https://github.com/GuiyuZhao/SphereNet)
+* [TEASER++](https://github.com/MIT-SPARK/TEASER-plusplus)
 
 
 ## Updates
