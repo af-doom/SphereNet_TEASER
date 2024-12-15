@@ -29,7 +29,7 @@ conda install pytorch==1.11.0 torchvision==0.12.0 cudatoolkit=11.3 -c pytorch
 conda install -c open3d-admin open3d==0.11.1
 pip install "git+git://github.com/erikwijmans/Pointnet2_PyTorch.git#egg=pointnet2_ops&subdirectory=pointnet2_ops_lib"
 ```
-- pip Teaser++
+- Setup Teaser++
 ```
 sudo apt install cmake libeigen3-dev libboost-all-dev
 conda create -n teaser_test python=3.6 numpy
