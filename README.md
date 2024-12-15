@@ -13,7 +13,7 @@
 [TEASER++: ast & certifiable 3D registration](https://github.com/MIT-SPARK/TEASER-plusplus).
 ![Uploading image.png…]()
 
-### (2) Setup
+### Setup
 This code has been tested with 
 1. Python 3.9, Pytorch 1.11.0, CUDA 10.2 on Arch Linux.
 2. Python 3.9, Pytorch 1.11.0, CUDA 11.1 on Ubuntu 20.04.
